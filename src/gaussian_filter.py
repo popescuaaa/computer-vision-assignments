@@ -1,16 +1,17 @@
-from numpy import mgrid, square, exp, pi, zeros, ravel, dot, uint8
+from numpy import mgrid, square, exp, pi, zeros, ravel, dot, uint8, ndarray
 from itertools import product
-from cv2 import COLOR_BGR2GRAY, cvtColor, imread, imshow
+import matplotlib.pyplot as plt
+from helpers import rgb2gray
 
 
-def gaussian_filter_kernel(size, sigma):
+def gaussian_filter_kernel(size: int, sigma: float) -> ndarray:
     center = size // 2
     x, y = mgrid[0 - center: size - center, 0 - center: size - center]
     gk = 1 / (2 * pi * sigma) * exp(-(square(x) + square(y)) / (2 * square(sigma)))
     return gk
 
 
-def gaussian_filter(image, size, sigma):
+def gaussian_filter(image: ndarray, size: int, sigma: float) -> ndarray:
     height, width = image.shape[0], image.shape[1]
     dst_height = height - size + 1
     dst_width = width - size + 1
@@ -31,5 +32,9 @@ def gaussian_filter(image, size, sigma):
 
 
 if __name__ == '__main__':
-    image = imread(r"../data/test.jpg")
-    print(image)
+    img = plt.imread("../data/test.jpg")
+    img = rgb2gray(img)
+    _img = gaussian_filter(image=img, size=15, sigma=1)
+    plt.imshow(_img)
+    plt.show()
+    plt.imsave("../data/test2.jpg", _img)
