@@ -33,9 +33,9 @@ def Normalize(image: np.ndarray) -> np.ndarray:
 # a faster implementation using recursion can be done instead This recursive approach would recurse through every
 # strong edge and find all connected weak edges
 
-def DoThreshHyst(image: np.ndarray) -> np.ndarray:
-    high_threshold_ratio = 0.2
-    low_threshold_ratio = 0.15
+def DoThreshHyst(image: np.ndarray, ht: float = 0.2, lt: float = 0.15) -> np.ndarray:
+    high_threshold_ratio = ht
+    low_threshold_ratio = lt
 
     g_sup = np.copy(image)
 
