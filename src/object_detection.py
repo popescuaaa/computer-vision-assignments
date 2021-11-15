@@ -44,7 +44,6 @@ if __name__ == '__main__':
                 mean_color = cv2.mean(image, mask=mask)
 
                 if mean_color[2] > mean_color[1] and mean_color[2] > mean_color[0]:
-                    print(mean_color)
                     # draw rectangle around contour
                     cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
@@ -58,7 +57,6 @@ if __name__ == '__main__':
             mean_color = cv2.mean(image, mask=mask)
 
             if mean_color[0] > mean_color[1] and mean_color[0] > mean_color[2] and mean_color[0] > 100:  # redish
-                print(mean_color)
                 # draw rectangle around contour
                 cv2.rectangle(image, (x, y), (x + w, y + h), (255, 0, 0), 2)
 
