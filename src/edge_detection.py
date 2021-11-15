@@ -1,10 +1,8 @@
-# Canny edge detection
-
-from scipy import misc
 from scipy import ndimage
 import numpy as np
 import matplotlib.pyplot as plt
 from helpers import rgb2gray
+import os
 
 
 # Apply Sobel Filter using the convolution operation Note that in this case I have used the filter to have a maximum
@@ -29,13 +27,13 @@ def Normalize(image: np.ndarray) -> np.ndarray:
     return image
 
 
-# Double threshold Hysteresis Note that I have used a very slow iterative approach for ease of understanding,
+# Double threshold Hysteresis. Note that I have used a very slow iterative approach for ease of understanding,
 # a faster implementation using recursion can be done instead This recursive approach would recurse through every
 # strong edge and find all connected weak edges
 
-def DoThreshHyst(image: np.ndarray) -> np.ndarray:
-    high_threshold_ratio = 0.2
-    low_threshold_ratio = 0.15
+def DoThreshHyst(image: np.ndarray, ht: float = 0.2, lt: float = 0.15) -> np.ndarray:
+    high_threshold_ratio = ht
+    low_threshold_ratio = lt
 
     g_sup = np.copy(image)
 
@@ -79,25 +77,15 @@ def DoThreshHyst(image: np.ndarray) -> np.ndarray:
 
 
 if __name__ == '__main__':
-    # Read image
-    img = plt.imread("../data/test.jpg")
-    plt.imshow(img, cmap=plt.get_cmap('gray'))
-    plt.show()
-
-    # Convert to grayscale
-    img = rgb2gray(img)
-    _img = SobelFilter(image=img, direction='x')
-    plt.imshow(_img)
-    plt.show()
-
-    # Normalize
-    _img = Normalize(_img)
-    plt.imshow(_img)
-    plt.show()
-
-    # Double threshold hysteresis
-    _img = DoThreshHyst(_img)
-    plt.imshow(_img)
-    plt.show()
-    
-    plt.imsave("../data/test_sobel.jpg", _img)
+    for file in os.listdir("../data/"):
+        if "Gura_Portitei_Scara" in file:
+            # Read image
+            img = plt.imread("../data/{}".format(file))
+            # Convert to grayscale
+            img = rgb2gray(img)
+            _img = SobelFilter(image=img, direction='x')
+            # Normalize
+            _img = Normalize(_img)
+            # Double threshold hysteresis
+            _img = DoThreshHyst(_img)
+            plt.imsave("../data/{}_edges.jpg".format(file), _img)

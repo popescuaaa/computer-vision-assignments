@@ -39,9 +39,9 @@ def box_filter(image: np.ndarray,
 
 # tst box filter with image
 if __name__ == "__main__":
-    img = plt.imread("../data/test.jpg")
+    img = plt.imread("../data/Gura_Portitei_Scara_040.jpg")
     img = rgb2gray(img)
     _img = box_filter(image=img, kernel_shape=(15, 15), stride=(1, 1))
     plt.imshow(_img)
     plt.show()
-    plt.imsave("../data/test3.jpg", _img)
+    plt.imsave("../data/Gura_Portitei_Scara_040_box.jpg", _img)
