@@ -128,13 +128,13 @@ def generate_datasets(train_dir: str, test_dir: str) -> dict:
     }
 
 
-def perform_classification(classifier: str, datasets: dict, n_components: int) -> dict:
+def perform_classification(classifier: str, datasets: dict, n_components: int) -> None:
     # Perform pca
     train = datasets["train"]
     test = datasets["test"]
 
-    train_features_pca = RandomizedPCA(n_components=num_components).fit_transform(train['features'])
-    test_features_pca = RandomizedPCA(n_components=num_components).fit_transform(test['features'])
+    train_features_pca = RandomizedPCA(n_components=n_components).fit_transform(train['features'])
+    test_features_pca = RandomizedPCA(n_components=n_components).fit_transform(test['features'])
 
     # Perform classification
     if classifier == "svm":
@@ -215,18 +215,83 @@ def perform_classification(classifier: str, datasets: dict, n_components: int) -
         print(classification_report(test['labels'], pred_labels, target_names=[str(i) for i in range(1, 6)]))
 
 
-"""
+def reconstruction_kernel(x, y):
+    """
+    Reconstruction kernel for SVM
+    :param x:
+    :param y:
+    :return:
+    """
+    return np.dot(x, y.T)
 
- Build a separate PCA space for each individual. Then, try also to use for classification, 
- the PCA reconstruction error for each class to decide the correct class of an image. 
- We expect that the correct class is the one which gives the minimum reconstruction error, 
- when a given image is projected onto the PCA space of that class. 
-    
- The idea here is to create separate PCA space for all classes present in the dataset. Then we can use
- any type of classifier to classify the test images, but the loss function will be adjusted with the 
- reconstruction error.
- 
-"""
+
+def perform_custom_classification(datasets: dict, n_components: int) -> None:
+    """
+
+     Build a separate PCA space for each individual. Then, try also to use for classification,
+     the PCA reconstruction error for each class to decide the correct class of an image.
+     We expect that the correct class is the one which gives the minimum reconstruction error,
+     when a given image is projected onto the PCA space of that class.
+
+     The idea here is to create separate PCA space for all classes present in the dataset. Then we can use
+     any type of classifier to classify the test images, but the loss function will be adjusted with the
+     reconstruction error.
+
+     :param datasets: dict of datasets
+     :param n_components: number of components to keep in the PCA space
+     :return: None
+
+    """
+
+    # Split data into small datasets
+    img_metadata = datasets['train']['image_dataset']
+    class_datasets = {}
+    for e in img_metadata:
+        img, label, illumination= e
+        if label not in class_datasets:
+            class_datasets[label] = [img]
+        else:
+            class_datasets[label].append(img)
+
+    # Convert to numpy arrays
+    for label in class_datasets:
+        class_datasets[label] = np.array(class_datasets[label])
+
+    # Build PCA space for each class
+    pca_spaces = {}
+    for i in range(1, 6):
+        pca_spaces[i] = RandomizedPCA(n_components=n_components)
+        pca_spaces[i].fit(class_datasets[i])
+
+    train_features = datasets['train']['features']
+    test_features = datasets['test']['features']
+
+    train_labels = datasets['train']['labels']
+    test_labels = datasets['test']['labels']
+
+    # Build a reconstruction matrix
+    for i in range(1, 6):
+        reconstruction_matrix += pca_spaces[i].inverse_transform()
+
+
+
+    # Create a SVM classifier for all classes
+    param_grid = {
+        'C': [1e3, 5e3, 1e4, 5e4, 1e5],
+        'gamma': [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
+    }
+    clf = GridSearchCV(SVC(kernel=reconstruction_kernel, class_weight='balanced', probability=True), param_grid)
+    clf = clf.fit(train_features_pca, train['labels'])
+    print("Best estimator found by grid search:")
+    print(clf.best_estimator_)
+
+    # Predict
+    pred_labels = clf.predict(test_features_pca)
+    print(classification_report(test['labels'], pred_labels, target_names=[str(i) for i in range(1, 6)]))
+
+
+
+
 if __name__ == '__main__':
     # Set random seed
     np.random.seed(0)
@@ -240,11 +305,12 @@ if __name__ == '__main__':
                         help='Classifier to use', default='ovo')
 
     parser.add_argument('-rec_pca', '--rec_pca', type=bool, required=False,
-                        help='Reconstruct PCA', default=False)
+                        help='Reconstruct PCA', default=True)
 
     args = parser.parse_args()
     num_components = args.num_components
     classifier = args.classifier
+    rec_pca = args.rec_pca
 
     train_dir = 'Train'
     test_dir = 'Test'
@@ -252,19 +318,9 @@ if __name__ == '__main__':
     # Generate datasets (already split into train and test)
     datasets = generate_datasets(train_dir=train_dir, test_dir=test_dir)
 
-    train = datasets['train']
-    test = datasets['test']
-
-    """
-        Now we will reshape our PCA components and define eigenfaces, 
-        which is the name given to a set of eigenvectors 
-        when used in the computer vision problem of human face recognition:
-        
-        # Reshape the eigenvectors
-        eigenfaces = train_features_pca.reshape(num_components, -1)
-        print('Eigenvalues shape:', eigenfaces.shape)
-    
-    """
-
-    # Perform classification
-    perform_classification(classifier, datasets, num_components)
+    if rec_pca:
+        # Perform custom classification with different PCA spaces
+        perform_custom_classification(datasets, num_components)
+    else:
+        # Perform classification
+        perform_classification(classifier, datasets, num_components)
