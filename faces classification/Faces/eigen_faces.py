@@ -215,16 +215,6 @@ def perform_classification(classifier: str, datasets: dict, n_components: int) -
         print(classification_report(test['labels'], pred_labels, target_names=[str(i) for i in range(1, 6)]))
 
 
-def reconstruction_kernel(x, y):
-    """
-    Reconstruction kernel for SVM
-    :param x:
-    :param y:
-    :return:
-    """
-    return np.dot(x, y.T)
-
-
 def perform_custom_classification(datasets: dict, n_components: int) -> None:
     """
 
@@ -247,21 +237,26 @@ def perform_custom_classification(datasets: dict, n_components: int) -> None:
     img_metadata = datasets['train']['image_dataset']
     class_datasets = {}
     for e in img_metadata:
-        img, label, illumination= e
+        img, label, illumination = e
         if label not in class_datasets:
-            class_datasets[label] = [img]
+            class_datasets[label] = [img.flatten()]
         else:
-            class_datasets[label].append(img)
+            class_datasets[label].append(img.flatten())
 
     # Convert to numpy arrays
     for label in class_datasets:
         class_datasets[label] = np.array(class_datasets[label])
 
+    print(class_datasets[1].shape)
     # Build PCA space for each class
     pca_spaces = {}
     for i in range(1, 6):
-        pca_spaces[i] = RandomizedPCA(n_components=n_components)
-        pca_spaces[i].fit(class_datasets[i])
+        if num_components > class_datasets[i].shape[0]:
+            pca_spaces[i] = RandomizedPCA(n_components=class_datasets[i].shape[0])
+            pca_spaces[i].fit(class_datasets[i])
+        else:
+            pca_spaces[i] = RandomizedPCA(n_components=num_components)
+            pca_spaces[i].fit(class_datasets[i])
 
     train_features = datasets['train']['features']
     test_features = datasets['test']['features']
@@ -269,27 +264,34 @@ def perform_custom_classification(datasets: dict, n_components: int) -> None:
     train_labels = datasets['train']['labels']
     test_labels = datasets['test']['labels']
 
-    # Build a reconstruction matrix
+    # Gather all images in a single array
+    all_images = []
     for i in range(1, 6):
-        reconstruction_matrix += pca_spaces[i].inverse_transform()
+        all_images.extend(class_datasets[i])
 
+    # Convert to numpy array
+    all_images = np.array(all_images)
+    print('Test', test_features.shape)
+    # Get the error corresponding for each class for each image
+    reconstruction_errors = []
+    for i in range(test_features.shape[0]):
+        img = test_features[i].reshape(-1, test_features[i].shape[0])
+        # Find the reconstruction error for each class
+        reconstruction_errors.append([])
+        for j in range(1, 6):
+            reconstruction_errors[i].append(np.linalg.norm(np.subtract(img,
+                                                                       pca_spaces[j].inverse_transform(
+                                                                           pca_spaces[j].transform(img)))))
 
+    # Convert to numpy array
+    reconstruction_errors = np.array(reconstruction_errors)
 
-    # Create a SVM classifier for all classes
-    param_grid = {
-        'C': [1e3, 5e3, 1e4, 5e4, 1e5],
-        'gamma': [0.0001, 0.0005, 0.001, 0.005, 0.01, 0.1],
-    }
-    clf = GridSearchCV(SVC(kernel=reconstruction_kernel, class_weight='balanced', probability=True), param_grid)
-    clf = clf.fit(train_features_pca, train['labels'])
-    print("Best estimator found by grid search:")
-    print(clf.best_estimator_)
+    # Associate each image to the class with the minimum reconstruction error
+    pred_labels = []
+    for i in range(reconstruction_errors.shape[0]):
+        pred_labels.append(np.argmin(reconstruction_errors[i]) + 1)
 
-    # Predict
-    pred_labels = clf.predict(test_features_pca)
-    print(classification_report(test['labels'], pred_labels, target_names=[str(i) for i in range(1, 6)]))
-
-
+    print(classification_report(train_labels, pred_labels, target_names=[str(i) for i in range(1, 6)]))
 
 
 if __name__ == '__main__':
