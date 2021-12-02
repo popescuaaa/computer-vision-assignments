@@ -128,13 +128,13 @@ def generate_datasets(train_dir: str, test_dir: str) -> dict:
     }
 
 
-def perform_classification(classifier: str, datasets: dict, n_components: int) -> dict:
+def perform_classification(classifier: str, datasets: dict, n_components: int) -> None:
     # Perform pca
     train = datasets["train"]
     test = datasets["test"]
 
-    train_features_pca = RandomizedPCA(n_components=num_components).fit_transform(train['features'])
-    test_features_pca = RandomizedPCA(n_components=num_components).fit_transform(test['features'])
+    train_features_pca = RandomizedPCA(n_components=n_components).fit_transform(train['features'])
+    test_features_pca = RandomizedPCA(n_components=n_components).fit_transform(test['features'])
 
     # Perform classification
     if classifier == "svm":
@@ -215,18 +215,85 @@ def perform_classification(classifier: str, datasets: dict, n_components: int) -
         print(classification_report(test['labels'], pred_labels, target_names=[str(i) for i in range(1, 6)]))
 
 
-"""
+def perform_custom_classification(datasets: dict, n_components: int) -> None:
+    """
 
- Build a separate PCA space for each individual. Then, try also to use for classification, 
- the PCA reconstruction error for each class to decide the correct class of an image. 
- We expect that the correct class is the one which gives the minimum reconstruction error, 
- when a given image is projected onto the PCA space of that class. 
-    
- The idea here is to create separate PCA space for all classes present in the dataset. Then we can use
- any type of classifier to classify the test images, but the loss function will be adjusted with the 
- reconstruction error.
- 
-"""
+     Build a separate PCA space for each individual. Then, try also to use for classification,
+     the PCA reconstruction error for each class to decide the correct class of an image.
+     We expect that the correct class is the one which gives the minimum reconstruction error,
+     when a given image is projected onto the PCA space of that class.
+
+     The idea here is to create separate PCA space for all classes present in the dataset. Then we can use
+     any type of classifier to classify the test images, but the loss function will be adjusted with the
+     reconstruction error.
+
+     :param datasets: dict of datasets
+     :param n_components: number of components to keep in the PCA space
+     :return: None
+
+    """
+
+    # Split data into small datasets
+    img_metadata = datasets['train']['image_dataset']
+    class_datasets = {}
+    for e in img_metadata:
+        img, label, illumination = e
+        if label not in class_datasets:
+            class_datasets[label] = [img.flatten()]
+        else:
+            class_datasets[label].append(img.flatten())
+
+    # Convert to numpy arrays
+    for label in class_datasets:
+        class_datasets[label] = np.array(class_datasets[label])
+
+    print(class_datasets[1].shape)
+    # Build PCA space for each class
+    pca_spaces = {}
+    for i in range(1, 6):
+        if num_components > class_datasets[i].shape[0]:
+            pca_spaces[i] = RandomizedPCA(n_components=class_datasets[i].shape[0])
+            pca_spaces[i].fit(class_datasets[i])
+        else:
+            pca_spaces[i] = RandomizedPCA(n_components=num_components)
+            pca_spaces[i].fit(class_datasets[i])
+
+    train_features = datasets['train']['features']
+    test_features = datasets['test']['features']
+
+    train_labels = datasets['train']['labels']
+    test_labels = datasets['test']['labels']
+
+    # Gather all images in a single array
+    all_images = []
+    for i in range(1, 6):
+        all_images.extend(class_datasets[i])
+
+    # Convert to numpy array
+    all_images = np.array(all_images)
+    print('Test', test_features.shape)
+    # Get the error corresponding for each class for each image
+    reconstruction_errors = []
+    for i in range(test_features.shape[0]):
+        img = test_features[i].reshape(-1, test_features[i].shape[0])
+        # Find the reconstruction error for each class
+        reconstruction_errors.append([])
+        for j in range(1, 6):
+            reconstruction_errors[i].append(np.linalg.norm(np.subtract(img,
+                                                                       pca_spaces[j].inverse_transform(
+                                                                           pca_spaces[j].transform(img)))))
+
+    # Convert to numpy array
+    reconstruction_errors = np.array(reconstruction_errors)
+
+    # Associate each image to the class with the minimum reconstruction error
+    pred_labels = []
+    for i in range(reconstruction_errors.shape[0]):
+        pred_labels.append(np.argmin(reconstruction_errors[i]) + 1)
+
+    print(classification_report(train_labels, pred_labels, target_names=[str(i) for i in range(1, 6)]))
+
+
 if __name__ == '__main__':
     # Set random seed
     np.random.seed(0)
@@ -240,11 +307,12 @@ if __name__ == '__main__':
                         help='Classifier to use', default='ovo')
 
     parser.add_argument('-rec_pca', '--rec_pca', type=bool, required=False,
-                        help='Reconstruct PCA', default=False)
+                        help='Reconstruct PCA', default=True)
 
     args = parser.parse_args()
     num_components = args.num_components
     classifier = args.classifier
+    rec_pca = args.rec_pca
 
     train_dir = 'Train'
     test_dir = 'Test'
@@ -252,19 +320,9 @@ if __name__ == '__main__':
     # Generate datasets (already split into train and test)
     datasets = generate_datasets(train_dir=train_dir, test_dir=test_dir)
 
-    train = datasets['train']
-    test = datasets['test']
-
-    """
-        Now we will reshape our PCA components and define eigenfaces, 
-        which is the name given to a set of eigenvectors 
-        when used in the computer vision problem of human face recognition:
-        
-        # Reshape the eigenvectors
-        eigenfaces = train_features_pca.reshape(num_components, -1)
-        print('Eigenvalues shape:', eigenfaces.shape)
-    
-    """
-
-    # Perform classification
-    perform_classification(classifier, datasets, num_components)
+    if rec_pca:
+        # Perform custom classification with different PCA spaces
+        perform_custom_classification(datasets, num_components)
+    else:
+        # Perform classification
+        perform_classification(classifier, datasets, num_components)
