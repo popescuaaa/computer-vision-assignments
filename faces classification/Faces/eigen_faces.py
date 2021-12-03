@@ -9,10 +9,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import classification_report
-from sklearn.metrics import confusion_matrix
 from sklearn.decomposition import PCA as RandomizedPCA  # For comparison purpose
 from sklearn.svm import SVC
 from sklearn.pipeline import Pipeline
@@ -20,6 +18,70 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.multiclass import OneVsOneClassifier
 from argparse import ArgumentParser
+
+
+class FeatureExtractor:
+    """
+    Extracts features from the images and creates the eigenfaces
+    This class is custom created in order to reproduce the pca style fit/transform
+    """
+    def __init__(self):
+        pass
+
+    def fit(self, images):
+        # transform the 2D images into 1D vectors
+        gammas = np.array([img.values.reshape((-1,)) for img in images])
+
+        # the average image
+        self.avg = gammas.mean(axis=0)
+
+        # substract the average from the images
+        phis = gammas - self.avg
+
+        # eigenvectors of L = phis . phis'
+        L = phis.dot(phis.T)
+        v = np.linalg.eig(L)[1]
+
+        # eigenvectors of the covariance matrix C = phis' . phis
+        self.u = phis.T.dot(v)
+
+        # normalize u
+        self.u = (self.u - self.u.mean(axis=0)) / self.u.std(axis=0)
+
+        return self
+
+    def transform(self, images):
+        # transform the 2D images into 1D vectors
+        gammas = np.array([img.values.reshape((-1,)) for img in images])
+
+        # substract the average from the images
+        phis = gammas - self.avg
+
+        # return the coordinates in the facespace basis
+        return phis.dot(self.u)
+
+    def fit_transform(self, images):
+        # transform the 2D images into 1D vectors
+        gammas = np.array([img.reshape((-1,)) for img in images])
+
+        # the average image
+        self.avg = gammas.mean(axis=0)
+
+        # center the images
+        phis = gammas - self.avg
+
+        # eigenvectors of L = phis . phis'
+        L = phis.dot(phis.T)
+        v = np.linalg.eig(L)[1]
+
+        # eigenvectors of the covariance matrix C = phis' . phis
+        self.u = phis.T.dot(v)
+
+        # normalize u
+        self.u = (self.u - self.u.mean(axis=0)) / self.u.std(axis=0)
+
+        # return the coordinates in the facespace basis
+        return phis.dot(self.u)
 
 
 def perform_pca(image: np.ndarray, n_components: int) -> np.ndarray:
@@ -92,7 +154,7 @@ def generate_datasets(train_dir: str, test_dir: str) -> dict:
         image_path = os.path.join(train_dir, train_filename)
         image = plt.imread(image_path)
 
-        train_features.append(image.flatten())
+        train_features.append(image)
         train_labels.append(image_class)
         train_image_dataset.append((image, image_class, image_illumination))
 
@@ -106,7 +168,7 @@ def generate_datasets(train_dir: str, test_dir: str) -> dict:
         image_path = os.path.join(test_dir, test_filename)
         image = plt.imread(image_path)
 
-        test_features.append(image.flatten())
+        test_features.append(image)
         test_labels.append(image_class)
         test_image_dataset.append((image, image_class, image_illumination))
 
@@ -133,8 +195,9 @@ def perform_classification(classifier: str, datasets: dict, n_components: int) -
     train = datasets["train"]
     test = datasets["test"]
 
-    train_features_pca = RandomizedPCA(n_components=n_components).fit_transform(train['features'])
-    test_features_pca = RandomizedPCA(n_components=n_components).fit_transform(test['features'])
+    feature_extractor = FeatureExtractor()
+    train_features_pca = feature_extractor.fit_transform(train['features'])
+    test_features_pca = feature_extractor.fit_transform(test['features'])
 
     # Perform classification
     if classifier == "svm":
@@ -304,10 +367,10 @@ if __name__ == '__main__':
                         help='Number of components to keep', default=50)
 
     parser.add_argument('-classifier', '--classifier', type=str, required=False,
-                        help='Classifier to use', default='ovo')
+                        help='Classifier to use', default='svm')
 
     parser.add_argument('-rec_pca', '--rec_pca', type=bool, required=False,
-                        help='Reconstruct PCA', default=True)
+                        help='Reconstruct PCA', default=False)
 
     args = parser.parse_args()
     num_components = args.num_components
@@ -326,3 +389,4 @@ if __name__ == '__main__':
     else:
         # Perform classification
         perform_classification(classifier, datasets, num_components)
+
