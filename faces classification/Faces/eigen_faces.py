@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.decomposition import PCA as RandomizedPCA  # For comparison purpose
 from sklearn.svm import SVC
 from sklearn.pipeline import Pipeline
@@ -199,6 +199,10 @@ def perform_classification(classifier: str, datasets: dict, n_components: int) -
     train_features_pca = feature_extractor.fit_transform(train['features'])
     test_features_pca = feature_extractor.fit_transform(test['features'])
 
+    # Extract only num_components features from each image
+    train_features_pca = train_features_pca[:, :n_components]
+    test_features_pca = test_features_pca[:, :n_components]
+
     # Perform classification
     if classifier == "svm":
         param_grid = {
@@ -213,6 +217,10 @@ def perform_classification(classifier: str, datasets: dict, n_components: int) -
         # Predict
         pred_labels = clf.predict(test_features_pca)
         print(classification_report(test['labels'], pred_labels, target_names=[str(i) for i in range(1, 6)]))
+
+        # Plot confusion matrix
+        plt.imshow(confusion_matrix(test['labels'], pred_labels), interpolation='nearest')
+        plt.show()
 
     elif classifier == "knn":
         pipe = Pipeline([
@@ -260,6 +268,10 @@ def perform_classification(classifier: str, datasets: dict, n_components: int) -
         pred_labels = best_clf.predict(test_features_pca)
         print(classification_report(test['labels'], pred_labels, target_names=[str(i) for i in range(1, 6)]))
 
+        # Plot confusion matrix
+        plt.imshow(confusion_matrix(test['labels'], pred_labels), interpolation='nearest')
+        plt.show()
+
     elif classifier == "ovo":
         """
                 One vs One
@@ -277,6 +289,9 @@ def perform_classification(classifier: str, datasets: dict, n_components: int) -
         pred_labels = clf.predict(test_features_pca)
         print(classification_report(test['labels'], pred_labels, target_names=[str(i) for i in range(1, 6)]))
 
+        # Plot confusion matrix
+        plt.imshow(confusion_matrix(test['labels'], pred_labels), interpolation='nearest')
+        plt.show()
 
 def perform_custom_classification(datasets: dict, n_components: int) -> None:
     """
@@ -364,10 +379,10 @@ if __name__ == '__main__':
     # Parse arguments
     parser = ArgumentParser()
     parser.add_argument('-num_components', '--num_components', type=int, required=False,
-                        help='Number of components to keep', default=50)
+                        help='Number of components to keep', default=5)
 
     parser.add_argument('-classifier', '--classifier', type=str, required=False,
-                        help='Classifier to use', default='svm')
+                        help='Classifier to use', default='logistic')
 
     parser.add_argument('-rec_pca', '--rec_pca', type=bool, required=False,
                         help='Reconstruct PCA', default=False)
