@@ -25,6 +25,7 @@ class FeatureExtractor:
     Extracts features from the images and creates the eigenfaces
     This class is custom created in order to reproduce the pca style fit/transform
     """
+
     def __init__(self):
         pass
 
@@ -243,6 +244,10 @@ def perform_classification(classifier: str, datasets: dict, n_components: int) -
         pred_labels = clf.predict(test_features_pca)
         print(classification_report(test['labels'], pred_labels, target_names=[str(i) for i in range(1, 6)]))
 
+        # Plot confusion matrix
+        plt.imshow(confusion_matrix(test['labels'], pred_labels), interpolation='nearest')
+        plt.show()
+
     elif classifier == "logistic":
         """
                 Logistic Regression
@@ -293,6 +298,7 @@ def perform_classification(classifier: str, datasets: dict, n_components: int) -
         plt.imshow(confusion_matrix(test['labels'], pred_labels), interpolation='nearest')
         plt.show()
 
+
 def perform_custom_classification(datasets: dict, n_components: int) -> None:
     """
 
@@ -333,7 +339,7 @@ def perform_custom_classification(datasets: dict, n_components: int) -> None:
             pca_spaces[i] = RandomizedPCA(n_components=class_datasets[i].shape[0])
             pca_spaces[i].fit(class_datasets[i])
         else:
-            pca_spaces[i] = RandomizedPCA(n_components=num_components)
+            pca_spaces[i] = RandomizedPCA(n_components=n_components)
             pca_spaces[i].fit(class_datasets[i])
 
     train_features = datasets['train']['features']
@@ -353,7 +359,7 @@ def perform_custom_classification(datasets: dict, n_components: int) -> None:
     # Get the error corresponding for each class for each image
     reconstruction_errors = []
     for i in range(test_features.shape[0]):
-        img = test_features[i].reshape(-1, test_features[i].shape[0])
+        img = test_features[i].reshape(1, test_features[i].shape[0] * test_features[i].shape[1])
         # Find the reconstruction error for each class
         reconstruction_errors.append([])
         for j in range(1, 6):
@@ -379,13 +385,13 @@ if __name__ == '__main__':
     # Parse arguments
     parser = ArgumentParser()
     parser.add_argument('-num_components', '--num_components', type=int, required=False,
-                        help='Number of components to keep', default=5)
+                        help='Number of components to keep', default=10)
 
     parser.add_argument('-classifier', '--classifier', type=str, required=False,
-                        help='Classifier to use', default='logistic')
+                        help='Classifier to use', default='ovo')
 
     parser.add_argument('-rec_pca', '--rec_pca', type=bool, required=False,
-                        help='Reconstruct PCA', default=False)
+                        help='Reconstruct PCA', default=True)
 
     args = parser.parse_args()
     num_components = args.num_components
@@ -404,4 +410,3 @@ if __name__ == '__main__':
     else:
         # Perform classification
         perform_classification(classifier, datasets, num_components)
-
