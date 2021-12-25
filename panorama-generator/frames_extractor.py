@@ -1,8 +1,14 @@
 import cv2
 import os
+import matplotlib.pyplot as plt
 
-def extract_frames(video_path, frames_dir, overwrite=False, start=-1, end=-1, every=1):
-    print(video_path)
+
+def extract_frames(video_path: str,
+                   frames_dir: str,
+                   overwrite: bool = False,
+                   start: int = -1,
+                   end: int = -1,
+                   every: int = 1):
     """
     Extract frames from a video using OpenCVs VideoCapture
     :param video_path: path of the video
@@ -14,12 +20,13 @@ def extract_frames(video_path, frames_dir, overwrite=False, start=-1, end=-1, ev
     :return: count of images saved
     """
 
-    video_path = os.path.normpath(video_path)  # make the paths OS (Windows) compatible
-    frames_dir = os.path.normpath(frames_dir)  # make the paths OS (Windows) compatible
+    video_path = os.path.normpath(
+        video_path)  # make the paths OS (Windows) compatible
+    frames_dir = os.path.normpath(
+        frames_dir)  # make the paths OS (Windows) compatible
 
-    print(video_path)
-
-    video_dir, video_filename = os.path.split(video_path)  # get the video path and filename from the path
+    video_dir, video_filename = os.path.split(
+        video_path)  # get the video path and filename from the path
 
     assert os.path.exists(video_path)  # assert the video file exists
 
@@ -31,7 +38,7 @@ def extract_frames(video_path, frames_dir, overwrite=False, start=-1, end=-1, ev
         end = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
 
     print('Start: ', start)
-    print('End: ',  end)
+    print('End: ', end)
 
     capture.set(1, start)  # set the starting frame of the capture
     frame = start  # keep track of which frame we are up to, starting from start
@@ -51,14 +58,15 @@ def extract_frames(video_path, frames_dir, overwrite=False, start=-1, end=-1, ev
 
         if frame % every == 0:  # if this is a frame we want to write out based on the 'every' argument
             while_safety = 0  # reset the safety count
-            save_path = os.path.join(frames_dir, video_filename, "{:010d}.jpg".format(frame))  # create the save path
-            
-            print('Save path: ', save_path)
+            save_path = os.path.join(
+                frames_dir, video_filename,
+                "{:010d}.jpg".format(frame))  # create the save path
 
-            if not os.path.exists(save_path) or overwrite:  # if it doesn't exist or we want to overwrite anyways
+            if not os.path.exists(
+                    save_path
+            ) or overwrite:  # if it doesn't exist or we want to overwrite anyways
                 cv2.imwrite(save_path, image)  # save the extracted image
                 saved_count += 1  # increment our counter by one
-                print(saved_count)
 
         frame += 1  # increment our frame count
 
@@ -71,6 +79,6 @@ if __name__ == '__main__':
     videos = os.listdir('./videos')
     print(videos)
     for v_name in videos:
-        extract_frames('./videos/{}'.format(v_name), './frames/')
-        break
-
+        os.mkdir('./frames/{}'.format(v_name))
+        farme_no = extract_frames('./videos/{}'.format(v_name), './frames/')
+        print('Saved: {} frames'.format(farme_no))
