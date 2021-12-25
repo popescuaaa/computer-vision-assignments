@@ -41,22 +41,22 @@ if __name__ == '__main__':
             img_kp = features.drawKeypoints(img, k)
             imgs_kp.append(img_kp)
 
-        # plt_img = np.concatenate([img_kp for img_kp in imgs_kp], axis=1)
-        # plt.figure(figsize=(15,15))
-        # plt.imshow(convertResult(plt_img))
-        # plt.show()
+        plt_img = np.concatenate(imgs_kp, axis=1)
+        plt.figure(figsize=(15,15))
+        plt.imshow(convertResult(plt_img))
+        plt.show()
 
         # matching features using BruteForce 
-        mat = features.matchFeatures(kf[0][2], kf[1][2], ratio = 0.6, opt = 'BF')
-        print(mat)
+        # mat = features.matchFeatures(kf[0][2], kf[1][2], ratio = 2, opt = 'BF')
+        # print(mat)
 
-        # Computing Homography matrix and mask
-        H, matMask = features.generateHomography(kf[0][0], kf[1][0])
+        # # Computing Homography matrix and mask
+        # H, matMask = features.generateHomography(kf[0][0], kf[1][0])
 
-        #draw matches
-        img=features.drawMatches(kf[0][0], kf[0][1] ,kf[1][0], kf[1][1], mat, matMask)
-        plt.figure(figsize=(15,15))
-        plt.imshow(convertResult(img))
-        plt.show()
+        # #draw matches
+        # img=features.drawMatches(kf[0][0], kf[0][1] ,kf[1][0], kf[1][1], mat, matMask)
+        # plt.figure(figsize=(15,15))
+        # plt.imshow(convertResult(img))
+        # plt.show()
 
         break

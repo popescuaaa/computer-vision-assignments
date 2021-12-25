@@ -49,9 +49,11 @@ def matchFeatures(featuresA, featuresB, ratio=0.752, opt="FB"):
     for m, n in matches:
         if m.distance < ratio * n.distance:
             good.append(m)
+            
     if len(good) > 4:
         return good
-    return good
+
+    raise Exception("Not enought matches")
 
 
 def generateHomography(src_img, dst_img, ransacRep=5.0):
