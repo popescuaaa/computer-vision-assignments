@@ -2,13 +2,21 @@ import cv2
 import numpy as np
 import os
 import re
-from imgstitch import exceptions
+from stitcher import exceptions
 
 MINIMUM_MATCH_POINTS = 20
 CONFIDENCE_THRESH = 65 # confidence percentage threshold of match points used for homography computation
 
 def get_matches(img_a_gray, img_b_gray, num_keypoints=1000, threshold=0.8):
     '''Function to get matched keypoints from two images using ORB
+
+    Oriented FAST and Rotated BRIEF (ORB) was developed at OpenCV labs by Ethan Rublee, 
+    Vincent Rabaud, Kurt Konolige, and Gary R. Bradski in 2011, as an efficient and viable 
+    alternative to SIFT and SURF. ORB was conceived mainly because SIFT and SURF are patented algorithms. 
+    ORB, however, is free to use. 
+
+    Paper link: http://www.willowgarage.com/sites/default/files/orb_final.pdf.
+
 
     Args:
         img_a_gray (numpy array): of shape (H, W) representing grayscale image A
@@ -19,6 +27,8 @@ def get_matches(img_a_gray, img_b_gray, num_keypoints=1000, threshold=0.8):
         match_points_a (numpy array): of shape (n, 2) representing x,y pixel coordinates of image A keypoints
         match_points_b (numpy array): of shape (n, 2) representing x,y pixel coordianted of matched keypoints in image B
     '''
+
+    
     orb = cv2.ORB_create(nfeatures=num_keypoints)
     kp_a, desc_a = orb.detectAndCompute(img_a_gray, None)
     kp_b, desc_b = orb.detectAndCompute(img_b_gray, None)

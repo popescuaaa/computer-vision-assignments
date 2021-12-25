@@ -38,6 +38,10 @@ def stitch_images(image_folder, image_filenames, stitch_direction):
     return pivot_img
 
 def stitch_images_and_save(image_folder, image_filenames, stitch_direction, output_folder=None):
+    print(image_folder)
+    print(image_filenames)
+
+
     """Function to stitch and save the resultant image.
         Images can be stitched horizontally or vertically.
         For horizontal stitching the images have to be passed from left to right order in the scene.
