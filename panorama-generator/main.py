@@ -2,16 +2,19 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-import stitch
 import utils
 import features
 import os
+import stitch
 
 def convertResult(img):
-    '''Because of your images which were loaded by opencv, 
+    '''
+    Because of your images which were loaded by opencv, 
     in order to display the correct output with matplotlib, 
     you need to reduce the range of your floating point image from [0,255] to [0,1] 
-    and converting the image from BGR to RGB:'''
+    and converting the image from BGR to RGB:
+    
+    '''
     img = np.array(img,dtype=float)/float(255)
     img = img[:,:,::-1]
     return img
@@ -25,16 +28,16 @@ if __name__ == '__main__':
         
         print('We are currently working on the following folder: {}'.format(folder))
 
-        # load images
+        # Load images
         list_images = utils.loadImages('{}/{}'.format(BASE_PATH, folder), 10, 10)
 
-        # extract keypoints and descriptors using sift
+        # Extract keypoints and descriptors using sift
         kf = []
         for img in list_images:
             k,f = features.findAndDescribeFeatures(img, opt='SIFT')
             kf.append((img, k, f))
 
-        # draw keypoints
+        # Draw keypoints
         imgs_kp = []
         for e in kf:
             img, k, f = e
@@ -46,17 +49,20 @@ if __name__ == '__main__':
         plt.imshow(convertResult(plt_img))
         plt.show()
 
-        # matching features using BruteForce 
-        # mat = features.matchFeatures(kf[0][2], kf[1][2], ratio = 2, opt = 'BF')
-        # print(mat)
+        # Matching features using BruteForce 
+        mat = features.matchFeatures(kf[0][2], kf[1][2], ratio = 2, opt = 'BF')
 
-        # # Computing Homography matrix and mask
-        # H, matMask = features.generateHomography(kf[0][0], kf[1][0])
+        # Computing Homography matrix and mask
+        H, matMask = features.generateHomography(kf[0][0], kf[1][0])
 
-        # #draw matches
-        # img=features.drawMatches(kf[0][0], kf[0][1] ,kf[1][0], kf[1][1], mat, matMask)
-        # plt.figure(figsize=(15,15))
-        # plt.imshow(convertResult(img))
-        # plt.show()
-
-        break
+        # Draw matches
+        img=features.drawMatches(kf[0][0], kf[0][1] ,kf[1][0], kf[1][1], mat, matMask)
+        plt.figure(figsize=(15,15))
+        plt.imshow(convertResult(img))
+        plt.show()
+        
+        # Generate panorama
+        pano, non_blend, left_side, right_side = stitch.warpTwoImages(list_images[1], list_images[0], True)
+        plt.figure(figsize=(15,15))
+        plt.imshow(convertResult(pano))
+        plt.show()
